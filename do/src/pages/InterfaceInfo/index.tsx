@@ -13,12 +13,12 @@ import {
 import { FormattedMessage, useIntl } from '@umijs/max';
 import { Button, Drawer, Input, message } from 'antd';
 import React, { useRef, useState } from 'react';
-import type { FormValueType } from './components/UpdateForm';
-import UpdateForm from './components/UpdateForm';
+import type { FormValueType } from './components/UpdateModal';
+import UpdateModal from './components/UpdateModal';
 import {listUserByPageUsingGET} from "@/services/springboot-init-master/userController";
 import {
-  addInterfaceInfoUsingPOST,
-  listInterfaceInfoByPageUsingGET
+  addInterfaceInfoUsingPOST, deleteInterfaceInfoUsingPOST,
+  listInterfaceInfoByPageUsingGET, updateInterfaceInfoUsingPOST
 } from "@/services/springboot-init-master/interfaceInfoController";
 import {SortOrder} from "antd/es/table/interface";
 import CreateModal from "@/pages/InterfaceInfo/components/CreateModal";
@@ -42,53 +42,7 @@ import CreateModal from "@/pages/InterfaceInfo/components/CreateModal";
 //   }
 // };
 
-/**
- * @en-US Update node
- * @zh-CN 更新节点
- *
- * @param fields
- */
-const handleUpdate = async (fields: FormValueType) => {
-  const hide = message.loading('Configuring');
-  try {
-    await updateRule({
-      name: fields.name,
-      desc: fields.desc,
-      key: fields.key,
-    });
-    hide();
 
-    message.success('Configuration is successful');
-    return true;
-  } catch (error) {
-    hide();
-    message.error('Configuration failed, please try again!');
-    return false;
-  }
-};
-
-/**
- *  Delete node
- * @zh-CN 删除节点
- *
- * @param selectedRows
- */
-const handleRemove = async (selectedRows: API.RuleListItem[]) => {
-  const hide = message.loading('正在删除');
-  if (!selectedRows) return true;
-  try {
-    await removeRule({
-      key: selectedRows.map((row) => row.key),
-    });
-    hide();
-    message.success('Deleted successfully and will refresh soon');
-    return true;
-  } catch (error) {
-    hide();
-    message.error('Delete failed, please try again');
-    return false;
-  }
-};
 
 const TableList: React.FC = () => {
   /**
@@ -124,6 +78,53 @@ const TableList: React.FC = () => {
     } catch (error: any) {
       hide();
       message.error('Adding failed, please try again!' + error.message);
+      return false;
+    }
+  };
+
+  /**
+   * @en-US Update node
+   * @zh-CN 更新节点
+   *
+   * @param fields
+   */
+  const handleUpdate = async (fields: API.InterfaceInfo) => {
+    const hide = message.loading('Configuring');
+    try {
+      await updateInterfaceInfoUsingPOST({
+        ...fields
+      });
+      hide();
+
+      message.success('Configuration is successful');
+      return true;
+    } catch (error: any) {
+      hide();
+      message.error('Configuration failed, please try again!' + error.mesage);
+      return false;
+    }
+  };
+
+  /**
+   *  Delete node
+   * @zh-CN 删除节点
+   *
+   * @param record
+   */
+  const handleRemove = async (record: API.InterfaceInfo) => {
+    const hide = message.loading('正在删除');
+    if (!record) return true;
+    try {
+      await deleteInterfaceInfoUsingPOST({
+        id: record.id
+      });
+      hide();
+      actionRef.current?.reload();
+      message.success('Deleted successfully and will refresh soon');
+      return true;
+    } catch (error) {
+      hide();
+      message.error('Delete failed, please try again');
       return false;
     }
   };
@@ -248,6 +249,16 @@ const TableList: React.FC = () => {
           }}
         >
           <FormattedMessage id="pages.searchTable.config" defaultMessage="修改" />
+        </a>,
+
+        <a
+          key="config"
+          onClick={() => {
+            // handleUpdateModalOpen(true);
+            handleRemove(record);
+          }}
+        >
+          <FormattedMessage id="pages.searchTable.config" defaultMessage="删除" />
         </a>,
         // <a key="subscribeAlert" href="https://procomponents.ant.design/">
         //   <FormattedMessage
@@ -382,7 +393,8 @@ const TableList: React.FC = () => {
       {/*  />*/}
       {/*  <ProFormTextArea width="md" name="desc" />*/}
       {/*</ModalForm>*/}
-      <UpdateForm
+      <UpdateModal
+        columns={columns}
         onSubmit={async (value) => {
           const success = await handleUpdate(value);
           if (success) {
@@ -399,7 +411,8 @@ const TableList: React.FC = () => {
             setCurrentRow(undefined);
           }
         }}
-        updateModalOpen={updateModalOpen}
+        // updateModalOpen={updateModalOpen}
+        visible={updateModalOpen}
         values={currentRow || {}}
       />
 
